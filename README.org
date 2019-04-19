@@ -10,11 +10,11 @@
 [[./codes.png]]
   
 ** 安装
-*** 只安装到本地
+*** 编译
 #+BEGIN_SRC bash
 ./build.sh
 #+END_SRC
-*** 同时安装到系统
+*** 编译并安装
 #+BEGIN_SRC bash
 ./build.sh install
 #+END_SRC
