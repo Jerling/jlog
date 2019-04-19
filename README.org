@@ -1,0 +1,119 @@
+#+TITLE: jlog : C++11 实现的高性能日志库
+
+## 项目描述
+- 功能：日志处理
+- 特点：可以同时写本地和网络日志
+- 协议：UDP
+
+## 代码统计
+
+[[./codes.png]]
+  
+## 安装
+### 只安装到本地
+#+BEGIN_SRC bash
+./build.sh
+#+END_SRC
+### 同时安装到系统
+#+BEGIN_SRC bash
+./build.sh install
+#+END_SRC
+
+## 使用
+
+### 1. 打印到控制台
+#+BEGIN_SRC C++
+#include "jlog.h"
+
+int main(){
+  /* 创建一个名字为 "stdout", 输出对象为 stdout, 日志等级为 debug 的 logger 对象 */
+  auto log = jlog::logger::new_logger("stdout", {STDOUT_FILENO},jlog::log_level_t::debug);
+  /* 调用相应的操作输出到指定的文件描述符 */
+  log->log("logger to stdout test");
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: [Apr 19 2019][17:29:05][ debug ] -> logger to stdout test
+
+### 2. 打印到本地日志文件
+#+BEGIN_SRC C++
+#include "jlog.h"
+
+int main(){
+  auto fd = open("/home/jer/test.txt", O_CREAT | O_);
+  /* 创建一个名字为 "stdout", 输出对象为 stdout, 日志等级为 debug 的 logger 对象 */
+  auto log = jlog::logger::new_logger("stdout", {fd},jlog::log_level_t::debug);
+  /* 调用相应的操作输出到指定的文件描述符 */
+  log->log("logger to stdout test");
+  /* 或着直接选定文件描述符 */
+  log->log(std::unordered_set<int>({fd}), "directly fd");
+  return 0;
+}
+#+END_SRC
+
+### 3. 打印到网络日志文件
+#### 1. 服务端
+如果有客户端日志写进来，会存放在 /var/jlog 目录下。
+#+BEGIN_SRC C++
+#include "jlog.h"
+
+int main(int argc, char *argv[]) {
+  unsigned short port = 0;
+  char *hname = nullptr;
+  arg_parse(argc, argv, hname, port);
+  if (port == 0) {
+    port = 5000; /* 默认端口 */
+  }
+
+  /* 创建日志服务器 */
+  udp_server us(hname, port);
+  DEBUG("constuct udp_server finisth\n");
+  us.start();
+
+  return 0;
+}
+#+END_SRC
+#### 2. 客户端
+王网络日志文件写日志。
+#+BEGIN_SRC C++
+#include "jlog.h"
+
+int main() {
+  /* 指定连接的 ip 地这地址 和 端口*/
+  auto log = jlog::logger::new_logger(
+      "remote", {udp_client("127.0.0.1", 5000).get_cfd()});
+  log->info("test from main test\n");
+  return 0;
+}
+#+END_SRC
+
+### 卸载
+#+BEGIN_SRC bash
+./build.sh uninstall  # 如果卸载不了，直接手动删除 /usr/local/ 下对应的文件即可
+#+END_SRC
+
+## 设计说明
+日志库的设计比较简单，也是利用了 socket 的抽象接口的便利性；将控制台、本地文件以
+及网络文件都通过文件描述来处理。这样之需要提供一个或多个文件描述符作为日志输出目
+的即可。为了方便，兼容多种输出格式。为了应对并发编程，在统一写入到文件描述符的地
+方都加了锁。关于锁的粒度，本库使用在一个 logger 对应一个锁，而不是一个文件描述符
+对应一把锁，后者粒度太小，引起频繁的加锁解锁。
+## 数据结构
+### 1. 单例
+设计了一个单例模板类，用于需要实现单例的类
+### 2. 注册中心
+设计了一个注册中心的类，可以将代码各个地方的日志对象注册到注册中心，在需要的时取
+出，可以很方便的实现对象共享。后期可以设计缓冲区作为后台线程，将前端写入缓冲区日
+志统一写入到目的地（控制台、本地文件或网络文件）。
+### 3. 日志对象
+设计了日志对象，用来收集前端需要打印的日志消息。
+
+## TODO
+- [ ] 加入自己的内存池
+- [ ] 缓冲区数据结构设计
+- [ ] 多缓冲区设计
+- [ ] 异步日志设计
+- [ ] 缓存策略设计
+- [ ] 并发服务器设计
