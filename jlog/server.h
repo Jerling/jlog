@@ -9,6 +9,7 @@ class udp_server {
   udp_server(const char*, unsigned short);
   int get_fd() const { return sfd_; }
   void start();
+  ~udp_server() { close(sfd_); }
 
  private:
   int sfd_;

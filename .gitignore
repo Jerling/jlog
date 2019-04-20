@@ -4,3 +4,4 @@
 tmp/
 *build*
 *.ccls*
++build.sh

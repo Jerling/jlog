@@ -1,3 +1,4 @@
+include_directories(..)
 add_executable(jlogd jlogd.cpp)
 target_link_libraries(jlogd jlog)
 

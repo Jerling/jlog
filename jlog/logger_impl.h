@@ -150,7 +150,11 @@ logger_impl::logger_impl(logger_impl&& log) {
   log.~logger_impl();
 }
 
-void logger_impl::destory() { delete this; }
+void logger_impl::destory() {
+  for (auto fd : fds_) {
+    close(fd);
+  }
+}
 
 /* 日志字符字符串 */
 const std::string& logger_impl::strlevel(log_level_t lv) {
