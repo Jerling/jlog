@@ -13,6 +13,7 @@
 #include <condition_variable>
 #include <cstdarg>
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -25,7 +26,15 @@
 #include <unordered_set>
 #include <vector>
 
-#define TIME_INFO "[" << __DATE__ << "][" __TIME__ << "]"
+inline std::string now() {
+  auto t_now = time(nullptr);
+  auto t_info = localtime(&t_now);
+  char buffer[128];
+  strftime(buffer, sizeof(buffer), "%Y/%m/%d %H:%M:%S", t_info);
+  return buffer;
+};
+
+#define TIME_INFO "[" << now() << "]"
 #define FILE_INFO "[" << __FILE__ << ":" << __LINE__ << "]"
 
 template <typename T>
