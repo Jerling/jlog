@@ -1,23 +1,60 @@
 #ifndef __LOGGER_IMPL_H_
 #define __LOGGER_IMPL_H_
 
-#include "common.h"
+#include "jlog_inner_inc.h"
 #include "registry.h"
 #include "singleton.h"
 
-namespace jlog {
+#define LOG_DF(...)                                                         \
+  {                                                                         \
+    singleton<jlog::details::logger_impl>::get_instance()->log(             \
+        {STDOUT_FILENO},                                                    \
+        jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                  __LINE__),                                                \
+        ##__VA_ARGS__);                                                     \
+  }
+#define LOG(level, ...)                                                     \
+  {                                                                         \
+    singleton<jlog::details::logger_impl>::get_instance()->log(             \
+        level, {STDOUT_FILENO},                                             \
+        jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                  __LINE__),                                                \
+        ##__VA_ARGS__);                                                     \
+  }
 
-enum log_level_t {
-  emerg = 0,
-  alert,
-  crit,
-  error,
-  warning,
-  notice,
-  info,
-  debug,
-  nops
-};
+#define INFO(...)                                                           \
+  {                                                                         \
+    singleton<jlog::details::logger_impl>::get_instance()->info(            \
+        {STDOUT_FILENO},                                                    \
+        jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                  __LINE__),                                                \
+        ##__VA_ARGS__);                                                     \
+  }
+#define DEBUG(...)                                                          \
+  {                                                                         \
+    singleton<jlog::details::logger_impl>::get_instance()->debug(           \
+        {STDOUT_FILENO},                                                    \
+        jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                  __LINE__),                                                \
+        ##__VA_ARGS__);                                                     \
+  }
+#define ERROR(...)                                                          \
+  {                                                                         \
+    singleton<jlog::details::logger_impl>::get_instance()->error(           \
+        {STDOUT_FILENO},                                                    \
+        jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                  __LINE__),                                                \
+        ##__VA_ARGS__);                                                     \
+  }
+
+#define EXIT_IF(cond, ...) \
+  {                        \
+    if (cond) {            \
+      ERROR(__VA_ARGS__);  \
+    }                      \
+  }
+
+namespace jlog {
 
 namespace details {
 struct logger_impl {
@@ -120,11 +157,13 @@ struct logger_impl {
 
   /* log 的辅助函数
    * fds: 自定义的输出描述符集合， 为空， 则使用默认的集合
-   * pre_str: 出错信息的前面的信息， 一般为时间， 行号等
+   * str: 出错信息的前面的信息， 一般为时间， 行号等
    * ...: 格式化字符串
    * */
-  void _log(const std::unordered_set<int>& fds, const std::string& pre_str,
-            const char*, ...);
+  template <typename... Args>
+  void _log(const std::unordered_set<int>& fds, const std::string& str,
+            Args... args);
+  void _log(const std::unordered_set<int>& fds, const std::string& str);
   bool _lv_is_valid(log_level_t lv) { return lv <= level_; }
 
   /* 日志等级 */
@@ -228,20 +267,19 @@ void logger_impl::error(const std::unordered_set<int>& fds, Args... args) {
   log(log_level_t::error, fds, std::forward<Args>(args)...);
 }
 
+template <typename... Args>
 void logger_impl::_log(const std::unordered_set<int>& fds,
-                       const std::string& pre_str, const char* fmt, ...) {
-  char buf[1024];
-  va_list vl;
-  va_start(vl, fmt);
-  vsprintf(buf, fmt, vl);
-  va_end(vl);
-  std::string msg = pre_str + " -> ";
-  msg += buf;
-
-  /* 防止用户忘记换行 */
-  if (msg[msg.size() - 1] != '\n') {
-    msg += '\n';
+                       const std::string& str, Args... args) {
+  std::string msg = str + " -> " += fmt(std::forward<Args>(args)...);
+  if (msg.back() != '\n') msg += "\n";
+  for (auto fd : fds) {
+    write(fd, msg.c_str(), msg.size());
   }
+}
+
+void logger_impl::_log(const std::unordered_set<int>& fds,
+                       const std::string& str) {
+  std::string msg = str + " -> Nothing !!!\n";
   for (auto fd : fds) {
     write(fd, msg.c_str(), msg.size());
   }
@@ -251,7 +289,7 @@ template <typename... Args>
 void logger_impl::log(log_level_t lv, const std::unordered_set<int>& fds,
                       const std::string& msg, Args... args) {
   if (_lv_is_valid(lv)) {
-    _log(fds, msg, std::forward<Args>(args)...);
+    _log(fds, msg + "[" + strlevel(lv) + "]", std::forward<Args>(args)...);
   }
   if (lv < log_level_t::warning) {
     exit(-1);
@@ -261,15 +299,7 @@ void logger_impl::log(log_level_t lv, const std::unordered_set<int>& fds,
 template <typename... Args>
 void logger_impl::log(log_level_t lv, const std::unordered_set<int>& fds,
                       Args... args) {
-  std::stringstream msg;
-  msg << TIME_INFO;
-  msg << "[" << strlevel(lv) << "]";
-  if (_lv_is_valid(lv)) {
-    _log(fds, msg.str(), std::forward<Args>(args)...);
-  }
-  if (lv < log_level_t::warning) {
-    exit(-1);
-  }
+  log(lv, fds, "[" + now() + "]", std::forward<Args>(args)...);
 }
 }  // namespace details
 }  // namespace jlog

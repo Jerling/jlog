@@ -1,47 +1,29 @@
 #ifndef __LOGGER_H_
 #define __LOGGER_H_
 
-#include "common.h"
 #include "logger_impl.h"
-#include "registry.h"
-#include "singleton.h"
 
-#define GET_ALLINFO      \
-  std::stringstream msg; \
-  msg << TIME_INFO << FILE_INFO
-
-#define LOG(level, ...)                                         \
-  {                                                             \
-    GET_ALLINFO;                                                \
-    singleton<jlog::details::logger_impl>::get_instance()->log( \
-        level, {STDOUT_FILENO}, msg.str(), __VA_ARGS__);        \
-  }
-
-#define INFO(...)                                                \
-  {                                                              \
-    GET_ALLINFO;                                                 \
-    singleton<jlog::details::logger_impl>::get_instance()->info( \
-        {STDOUT_FILENO}, msg.str(), __VA_ARGS__);                \
-  }
-#define DEBUG(...)                                                \
-  {                                                               \
-    GET_ALLINFO;                                                  \
-    singleton<jlog::details::logger_impl>::get_instance()->debug( \
-        {STDOUT_FILENO}, msg.str(), __VA_ARGS__);                 \
-  }
-#define ERROR(...)                                                \
-  {                                                               \
-    GET_ALLINFO;                                                  \
-    singleton<jlog::details::logger_impl>::get_instance()->error( \
-        {STDOUT_FILENO}, msg.str(), __VA_ARGS__);                 \
-  }
-
-#define EXIT_IF(cond, ...) \
-  {                        \
-    if (cond) {            \
-      ERROR(__VA_ARGS__);  \
-    }                      \
-  }
+#define LOG_DTL_DF(log, ...)                                                   \
+  log->log(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                     __LINE__),                                                \
+           ##__VA_ARGS__)
+#define LOG_DTL(log, level, ...)                                               \
+  log->log(level,                                                              \
+           jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
+                     __LINE__),                                                \
+           ##__VA_ARGS__)
+#define INFO_DTL(log, ...)                                            \
+  log->info(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+                      __func__, __LINE__),                            \
+            ##__VA_ARGS__)
+#define DEBUG_DTL(log, ...)                                            \
+  log->debug(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+                       __func__, __LINE__),                            \
+             ##__VA_ARGS__)
+#define ERROR_DTL(log, ...)                                            \
+  log->error(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+                       __func__, __LINE__),                            \
+             ##__VA_ARGS__)
 
 namespace jlog {
 struct logger {

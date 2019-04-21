@@ -1,7 +1,7 @@
 #ifndef __SINGLETON_H_
 #define __SINGLETON_H_
 
-#include "common.h"
+#include "jlog_inner_inc.h"
 
 template <typename T>
 struct singleton {

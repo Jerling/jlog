@@ -2,7 +2,7 @@
 
 INSTALL_DIR=/usr/local
 SRC_DIR=jlog
-BIULD_DIR=build
+BUILD_DIR=build
 
 if [ "$1" == "uninstall" ]
 then
@@ -11,12 +11,12 @@ then
     sudo rm -rf $INSTALL_DIR/lib/*jlog*
     exit
 fi
-if [ ! -d BUILD_DIR ]
+if [ ! -d $BUILD_DIR ]
 then
-    mkdir BUILD_DIR
+    mkdir $BUILD_DIR
 fi
 
-cd BUILD_DIR && cmake .. && make && cd -
+cd $BUILD_DIR && cmake .. && make && cd -
 
 if [ "$1" == "install" ]
 then
@@ -26,6 +26,6 @@ then
     fi
     sudo cp $SRC_DIR/*.h $INSTALL_DIR/include/$SRC_DIR
     sudo cp jlog.h $INSTALL_DIR/include
-    sudo cp $BIULD_DIR/lib/libjlog.so $INSTALL_DIR/lib
-    sudo cp $BIULD_DIR/bin/jlogd $INSTALL_DIR/bin
+    sudo cp $BUILD_DIR/lib/libjlog.so $INSTALL_DIR/lib
+    sudo cp $BUILD_DIR/bin/jlogd $INSTALL_DIR/bin
 fi

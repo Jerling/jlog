@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
+set(JLOG_VERSION_MAJOR 1)
+set(JLOG_VERSION_MINOR 0)
 set(PROJECT_NAME "jlog")
 project(${PROJECT_NAME})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
