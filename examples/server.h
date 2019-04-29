@@ -175,8 +175,15 @@ class udp_server {
       if (over) {
         std::shared_ptr<jlog::buffer_lists> buffer;
         {
-          std::unique_lock<std::mutex> lk(mbufs[caddr]);
-          buffer = buffers[caddr];
+          {
+            /* 从 buffers 中取出对应的 buffer */
+            std::unique_lock<std::mutex> lk(m);
+            buffer = buffers[caddr];
+            buffers[caddr] = nullptr;
+          }
+          /* 目前主线程只有一个，也就是说同一时刻只能处理一个客户，音因此不需要加锁
+           */
+          // std::unique_lock<std::mutex> lk(mbufs[caddr]);
           if (buffer == nullptr) {
             buffer = std::make_shared<jlog::buffer_lists>();
             buffers[caddr] = buffer;
@@ -190,7 +197,12 @@ class udp_server {
           }
           buffer->push_back(cur_tmp);
         }
-        cv.notify_one(); /* 写满一个 buffer */
+        {
+          /* 将 buffer 插入到 buffers 中 */
+          std::unique_lock<std::mutex> lk(m);
+          buffers[caddr] = buffer;
+          cv.notify_one(); /* 写满一个 buffer */
+        }
       }
     }
   }

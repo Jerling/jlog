@@ -2,20 +2,17 @@
 #define BUFFER_H
 
 #include "jlog_inner_inc.h"
-const size_t JLOG_BUFFER_SZ = 8192;
+const size_t JLOG_BUFFER_SZ = 1024 * 8;
 
 namespace jlog {
 namespace details {
 class buffer {
  public:
-  buffer() : len_(0), caplity_(JLOG_BUFFER_SZ) {}
-  buffer(size_t caplity) : len_(0), caplity_(caplity) {
-    data_ = (char *)malloc(caplity_);
+  buffer() : len_(0), caplity_(JLOG_BUFFER_SZ) {
+    data_ = (char *)tc_malloc(caplity_);
   }
-  buffer(char *str, size_t len) : len_(len), caplity_(JLOG_BUFFER_SZ) {
-    if (len > caplity_) caplity_ = len;
-    data_ = (char *)malloc(caplity_);
-    memmove(data_, str, len_);
+  buffer(size_t caplity) : len_(0), caplity_(caplity) {
+    data_ = (char *)tc_malloc(caplity_);
   }
   buffer(const buffer &bf) {
     if (data_ == this->data_) return;
@@ -57,16 +54,15 @@ class buffer {
 
 struct buffer_node {
   using buffer = details::buffer;
-  buffer_node() : buf(JLOG_BUFFER_SZ), next(nullptr), prev(nullptr) {}
-  buffer_node(char *str, size_t len)
-      : buf(str, len), next(nullptr), prev(nullptr) {}
+  buffer_node() : buf(), next(nullptr), prev(nullptr) {}
+  buffer_node(size_t cap) : buf(cap), next(nullptr), prev(nullptr) {}
   buffer buf;
   std::shared_ptr<buffer_node> next, prev;
 };
 
 class buffer_lists {
  public:
-  buffer_lists() : m_(), size_(0) {
+  buffer_lists() : size_(0) {
     head_ = std::make_shared<buffer_node>();
     head_->prev = head_;
     head_->next = head_;
@@ -79,18 +75,12 @@ class buffer_lists {
     new_node->prev = head_;
     head_->next = new_node;
   };
-  bool empty() {
-    std::unique_lock<std::mutex> lmt(m_);
-    return cur_ == head_->next;
-  }
+  bool empty() { return cur_ == head_->next; }
   std::shared_ptr<buffer_node> begin() { return head_->next; }
   std::shared_ptr<buffer_node> end() { return head_; }
-  std::shared_ptr<buffer_node> head() { return head_; }
-  std::shared_ptr<buffer_node> tail() { return head_->prev; }
   void reset() { cur_ = head_->next; }
 
  private:
-  std::mutex m_;
   size_t size_;
   std::shared_ptr<buffer_node> head_;
   std::shared_ptr<buffer_node> cur_;
