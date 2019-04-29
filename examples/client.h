@@ -1,7 +1,7 @@
 #ifndef __CLIENT_H_
 #define __CLIENT_H_
 
-#include "jlogd.h"
+#include "jlog.h"
 
 /* udp 客户端 */
 class udp_client {

@@ -1,5 +1,5 @@
 include_directories(..)
-add_executable(jlogd jlogd.cpp)
+add_executable(jlogd server.cpp)
 target_link_libraries(jlogd jlog)
 
 add_executable(client client.cpp)

@@ -1,4 +1,4 @@
-#include "jlog.h"
+#include "server.h"
 
 int main(int argc, char *argv[]) {
   unsigned short port = 0;

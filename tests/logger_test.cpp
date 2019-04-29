@@ -1,6 +1,5 @@
 #include "../jlog.h"
 int main() {
-  auto fd = open("/home/jer/test.txt", O_CREAT | O_RDWR, RWRWRW);
   LOG(jlog::log_level_t::debug, "LOG test %d\n", 10);
   INFO();
   auto log = jlog::logger::new_logger("stdout", {1});
