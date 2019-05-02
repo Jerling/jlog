@@ -27,7 +27,7 @@ class buffer {
     len_ = bf.len_;
     caplity_ = bf.caplity_;
   }
-  int append(char *str, size_t len) {
+  int append(const char *str, size_t len) {
     if (len + len_ > caplity_) {
       return -1;
     }

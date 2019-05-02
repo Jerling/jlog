@@ -8,8 +8,6 @@
 
 /* 一条日志的缓冲大小 */
 const int MAXLINE = 1024;
-/* 多长时间刷新一次 buffers */
-const int INTERVAL = 1;
 /* 日志目录 */
 const char log_dir[] = "/var/jlog";
 

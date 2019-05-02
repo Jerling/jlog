@@ -9,24 +9,22 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <algorithm>
+#include <cassert>
 #include <chrono>
 #include <condition_variable>
 #include <cstdarg>
 #include <cstdio>
 #include <ctime>
-#include <fstream>
 #include <iostream>
-#include <list>
 #include <memory>
 #include <mutex>
-#include <queue>
-#include <sstream>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 #include "gperftools/tcmalloc.h"
+
+/* 多长时间刷新一次 buffers */
+const int INTERVAL = 1;
 
 template <typename T>
 static void deleter(T* obj) {

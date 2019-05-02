@@ -1,6 +1,7 @@
 #ifndef __LOGGER_IMPL_H_
 #define __LOGGER_IMPL_H_
 
+#include "buffer.h"
 #include "jlog_inner_inc.h"
 #include "registry.h"
 #include "singleton.h"
@@ -57,6 +58,13 @@
 namespace jlog {
 
 namespace details {
+std::mutex m_buffer_lists_;
+std::condition_variable cv_buffer_lists_;
+std::unordered_map<int, std::shared_ptr<buffer_lists>> buffer_lists_;
+std::unordered_map<int, std::shared_ptr<buffer_lists>> output_lists_;
+std::unordered_map<int, std::mutex> m_current_;
+std::unordered_map<int, std::shared_ptr<buffer_node>> current_;
+
 struct logger_impl {
   /* 构造函数 */
   logger_impl(const logger_impl&) = delete;
@@ -150,6 +158,7 @@ struct logger_impl {
   void error(Args... args);
   template <typename... Args>
   void error(const std::unordered_set<int>& fds, Args... args);
+  static void thread_func();
 
  private:
   /* 只能在堆上生成对象， 便于将对象添加到注册中心 */
@@ -174,7 +183,13 @@ struct logger_impl {
   std::unordered_set<int> fds_ = {};
   /* 日志等级到对应字符字符串的描述表 */
   static const std::unordered_map<log_level_t, std::string> level_m;
+  static void _write(int fd, const char* msg, size_t len);
+  static bool running_;
+  static std::mutex lr_;
 };
+
+bool logger_impl::running_ = false;
+std::mutex logger_impl::lr_;
 
 const std::unordered_map<log_level_t, std::string> logger_impl::level_m{
     {log_level_t::debug, " debug "},  {log_level_t::info, " info  "},
@@ -190,6 +205,7 @@ logger_impl::logger_impl(logger_impl&& log) {
 }
 
 void logger_impl::destory() {
+  sleep(2); /* 等待后台线程完成 */
   for (auto fd : fds_) {
     close(fd);
   }
@@ -272,16 +288,20 @@ void logger_impl::_log(const std::unordered_set<int>& fds,
                        const std::string& str, Args... args) {
   std::string msg = str + " -> " += fmt(std::forward<Args>(args)...);
   if (msg.back() != '\n') msg += "\n";
-  for (auto fd : fds) {
-    write(fd, msg.c_str(), msg.size());
+  for (auto fd : fds_) {
+    if (fd == 1 || fd == 2) { /* 控制台消息直接输出 */
+      write(fd, msg.c_str(), msg.size());
+    } else { /* 文件中日志采用异步方式 */
+      _write(fd, msg.c_str(), msg.size());
+    }
   }
 }
 
 void logger_impl::_log(const std::unordered_set<int>& fds,
                        const std::string& str) {
   std::string msg = str + " -> Nothing !!!\n";
-  for (auto fd : fds) {
-    write(fd, msg.c_str(), msg.size());
+  for (auto fd : fds_) {
+    _write(fd, msg.c_str(), msg.size());
   }
 }
 
@@ -301,6 +321,98 @@ void logger_impl::log(log_level_t lv, const std::unordered_set<int>& fds,
                       Args... args) {
   log(lv, fds, "[" + now() + "]", std::forward<Args>(args)...);
 }
+
+void logger_impl::thread_func() {
+  while (true) {
+    bool recved = false;
+    {
+      std::unique_lock<std::mutex> lk(m_buffer_lists_);
+      if (buffer_lists_.empty()) {
+        cv_buffer_lists_.wait_for(lk, std::chrono::seconds(INTERVAL));
+      }
+      if (!buffer_lists_.empty()) {
+        buffer_lists_.swap(output_lists_);
+        recved = true;
+      }
+    }
+    if (!recved && !m_current_.empty()) {
+      for (auto& c : current_) {
+        std::unique_lock<std::mutex> lk(m_current_[c.first]);
+        if (c.second->buf.len() == 0) continue;
+        if (output_lists_[c.first] == nullptr) {
+          output_lists_[c.first] = std::make_shared<buffer_lists>();
+        }
+        output_lists_[c.first]->push_back(c.second);
+        c.second.reset(new buffer_node);
+      }
+      if (!output_lists_.empty()) recved = true;
+    }
+    if (recved) {
+      for (auto o : output_lists_) {
+        auto node = o.second->begin();
+        while (node != node->next && node != o.second->end()) {
+          write(o.first, node->buf.data(), node->buf.len());
+          node = node->next;
+        }
+      }
+      output_lists_.clear();
+    }
+  }
+}
+
+void logger_impl::_write(int fd, const char* msg, size_t len) {
+  {
+    if (!running_) {
+      std::unique_lock<std::mutex> lk(lr_);
+      if (!running_) {
+        static std::thread thread_(thread_func);
+        thread_.detach();
+        running_ = true;
+      }
+    }
+    bool over = false;
+    {
+      std::unique_lock<std::mutex> lk(m_current_[fd]);
+      if (current_[fd] == nullptr) {
+        current_[fd] = std::make_shared<jlog::buffer_node>();
+      }
+      if (current_[fd]->buf.len() + len < current_[fd]->buf.caplity()) {
+        current_[fd]->buf.append(msg, len);
+      } else {
+        over = true; /* 前端日志 buffer 写满 */
+      }
+    }
+    if (over) {
+      std::shared_ptr<jlog::buffer_lists> buffer;
+      {
+        {
+          /* 从 buffers 中取出对应的 buffer */
+          std::unique_lock<std::mutex> lk(m_buffer_lists_);
+          buffer = buffer_lists_[fd];
+          buffer_lists_[fd] = nullptr;
+        }
+        if (buffer == nullptr) {
+          buffer = std::make_shared<jlog::buffer_lists>();
+        }
+        std::shared_ptr<jlog::buffer_node> cur_tmp;
+        {
+          std::unique_lock<std::mutex> lk(m_current_[fd]);
+          cur_tmp = current_[fd]; /* 延后 push */
+          current_[fd].reset(new jlog::buffer_node);
+          current_[fd]->buf.append(msg, len); /* 将超过部份写入新的 buffer */
+        }
+        buffer->push_back(cur_tmp);
+      }
+      {
+        /* 将 buffer 插入到 buffers 中 */
+        std::unique_lock<std::mutex> lk(m_buffer_lists_);
+        buffer_lists_[fd] = buffer;
+        cv_buffer_lists_.notify_one(); /* 写满一个 buffer */
+      }
+    }
+  }
+}
+
 }  // namespace details
 }  // namespace jlog
 
