@@ -3,27 +3,37 @@
 
 #include "logger_impl.h"
 
-#define LOG_DTL_DF(log, ...)                                                   \
-  log->log(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
-                     __LINE__),                                                \
-           ##__VA_ARGS__)
-#define LOG_DTL(log, level, ...)                                               \
-  log->log(level,                                                              \
-           jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
-                     __LINE__),                                                \
-           ##__VA_ARGS__)
-#define INFO_DTL(log, ...)                                            \
-  log->info(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
-                      __func__, __LINE__),                            \
-            ##__VA_ARGS__)
-#define DEBUG_DTL(log, ...)                                            \
-  log->debug(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+#define LOG_DTL_DF(log, ...)                                           \
+  do {                                                                 \
+    log->log(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
                        __func__, __LINE__),                            \
-             ##__VA_ARGS__)
-#define ERROR_DTL(log, ...)                                            \
-  log->error(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+             ##__VA_ARGS__);                                           \
+  } while (0)
+#define LOG_DTL(log, level, ...)                                       \
+  do {                                                                 \
+    log->log(level,                                                    \
+             jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
                        __func__, __LINE__),                            \
-             ##__VA_ARGS__)
+             ##__VA_ARGS__);                                           \
+  } while (0)
+#define INFO_DTL(log, ...)                                              \
+  do {                                                                  \
+    log->info(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+                        __func__, __LINE__),                            \
+              ##__VA_ARGS__);                                           \
+  } while (0)
+#define DEBUG_DTL(log, ...)                                              \
+  do {                                                                   \
+    log->debug(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+                         __func__, __LINE__),                            \
+               ##__VA_ARGS__);                                           \
+  } while (0)
+#define ERROR_DTL(log, ...)                                              \
+  do {                                                                   \
+    log->error(jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, \
+                         __func__, __LINE__),                            \
+               ##__VA_ARGS__);                                           \
+  } while (0)
 
 namespace jlog {
 struct logger {

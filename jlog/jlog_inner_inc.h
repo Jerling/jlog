@@ -21,7 +21,6 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
-#include "gperftools/tcmalloc.h"
 
 /* 多长时间刷新一次 buffers */
 const int INTERVAL = 1;

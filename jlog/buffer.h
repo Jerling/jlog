@@ -9,10 +9,10 @@ namespace details {
 class buffer {
  public:
   buffer() : len_(0), caplity_(JLOG_BUFFER_SZ) {
-    data_ = (char *)tc_malloc(caplity_);
+    data_ = (char *)malloc(caplity_);
   }
   buffer(size_t caplity) : len_(0), caplity_(caplity) {
-    data_ = (char *)tc_malloc(caplity_);
+    data_ = (char *)malloc(caplity_);
   }
   buffer(const buffer &bf) {
     if (data_ == this->data_) return;
@@ -22,7 +22,7 @@ class buffer {
   }
   buffer(buffer &&bf) {
     if (data_ == this->data_) return;
-    tc_free(data_);
+    free(data_);
     data_ = bf.data_;
     len_ = bf.len_;
     caplity_ = bf.caplity_;

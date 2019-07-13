@@ -7,53 +7,53 @@
 #include "singleton.h"
 
 #define LOG_DF(...)                                                         \
-  {                                                                         \
+  do {                                                                      \
     singleton<jlog::details::logger_impl>::get_instance()->log(             \
         {STDOUT_FILENO},                                                    \
         jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
                   __LINE__),                                                \
         ##__VA_ARGS__);                                                     \
-  }
+  } while (0)
 #define LOG(level, ...)                                                     \
-  {                                                                         \
+  do {                                                                      \
     singleton<jlog::details::logger_impl>::get_instance()->log(             \
         level, {STDOUT_FILENO},                                             \
         jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
                   __LINE__),                                                \
         ##__VA_ARGS__);                                                     \
-  }
+  } while (0)
 
 #define INFO(...)                                                           \
-  {                                                                         \
+  do {                                                                      \
     singleton<jlog::details::logger_impl>::get_instance()->info(            \
         {STDOUT_FILENO},                                                    \
         jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
                   __LINE__),                                                \
         ##__VA_ARGS__);                                                     \
-  }
+  } while (0)
 #define DEBUG(...)                                                          \
-  {                                                                         \
+  do {                                                                      \
     singleton<jlog::details::logger_impl>::get_instance()->debug(           \
         {STDOUT_FILENO},                                                    \
         jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
                   __LINE__),                                                \
         ##__VA_ARGS__);                                                     \
-  }
+  } while (0)
 #define ERROR(...)                                                          \
-  {                                                                         \
+  do {                                                                      \
     singleton<jlog::details::logger_impl>::get_instance()->error(           \
         {STDOUT_FILENO},                                                    \
         jlog::fmt("[%s][%s:%s:%d]", jlog::now().data(), __FILE__, __func__, \
                   __LINE__),                                                \
         ##__VA_ARGS__);                                                     \
-  }
+  } while (0)
 
 #define EXIT_IF(cond, ...) \
-  {                        \
+  do {                     \
     if (cond) {            \
       ERROR(__VA_ARGS__);  \
     }                      \
-  }
+  } while (0)
 
 namespace jlog {
 
@@ -180,7 +180,7 @@ struct logger_impl {
   /* 日志名称 */
   std::string name_ = "";
   /* 要打印到的描述符集合 */
-  std::unordered_set<int> fds_ = {};
+  std::unordered_set<int> fds_ = {STDOUT_FILENO};
   /* 日志等级到对应字符字符串的描述表 */
   static const std::unordered_map<log_level_t, std::string> level_m;
   static void _write(int fd, const char* msg, size_t len);
